@@ -59,10 +59,16 @@ class GeometricControl(BaseControl):
         ##########################################################################
         #### YOUR CODE STARTS HERE: set the controller gains #####################
         # Use positive-definite diagonal matrices, for example np.diag([1.0, 1.0, 1.0]).
-        self.K_x = np.zeros((3, 3))         # position gain
-        self.K_v = np.zeros((3, 3))         # velocity gain
-        self.K_R = np.zeros((3, 3))         # attitude gain
-        self.K_Omega = np.zeros((3, 3))     # angular velocity gain
+        
+        
+        self.K_x = np.diag([0.972,0.972,0.972])         # position gain
+        self.K_v = np.diag([0.292,0.292,0.292])         # velocity gain
+        
+        self.K_R = np.diag([8.75e-3, 8.75e-3, 4.88e-3])         # attitude gain
+        self.K_Omega = np.diag((6.3e-4, 6.3e-4, 5.86e-4))     # angular velocity gain
+       
+       
+       
         #### YOUR CODE ENDS HERE #################################################
         ##########################################################################
 
@@ -258,6 +264,24 @@ class GeometricControl(BaseControl):
         #### YOUR CODE STARTS HERE ###############################################
         thrust = 0.0
         target_rot = np.eye(3)
+
+
+
+        e_x = cur_pos - target_pos
+        e_v = cur_vel - target_vel
+
+        F_d = -self.K_x@e_x - self.K_v@e_v + self.m*(self.g*self.e3 + target_acc)  # desired force
+
+        thrust = np.dot(F_d,cur_rot@self.e3)
+
+        b_3_d = F_d/np.linalg.norm(F_d)  # desired body z-axis
+        b_1_c = np.array([np.cos(target_yaw), np.sin(target_yaw), 0.0])  # desired body x-axis in the horizontal plane
+        b_2_d = np.cross(b_3_d,b_1_c)/np.linalg.norm(np.cross(b_3_d,b_1_c))  # desired body y-axis
+        b_1_d = np.cross(b_2_d,b_3_d)  #
+
+        R_d = np.column_stack((b_1_d, b_2_d, b_3_d))  # desired rotation matrix
+        target_rot = R_d
+
         #### YOUR CODE ENDS HERE #################################################
         ##########################################################################
         return thrust, target_rot
@@ -286,9 +310,21 @@ class GeometricControl(BaseControl):
             (3,)-shaped moment M about the body axes [N m].
 
         """
+
+
+
         ##########################################################################
         #### YOUR CODE STARTS HERE ###############################################
-        moment = np.zeros(3)
+        """
+        Computes the moment M from the current rotation matrix R, the current angular velocity Omega,
+        and the desired rotation matrix R_d. The desired angular velocity Omega_d is zero.
+        """
+
+        e_R = 0.5*(vee(target_rot.T@cur_rot)-vee(cur_rot.T@target_rot))  # attitude error
+        
+        moment = -self.K_R@e_R - self.K_Omega@cur_ang_vel + np.cross(cur_ang_vel, self.J@cur_ang_vel)  # moment
+        
+        
         #### YOUR CODE ENDS HERE #################################################
         ##########################################################################
         return moment
