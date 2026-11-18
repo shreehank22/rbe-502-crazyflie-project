@@ -1,0 +1,192 @@
+
+===== hover_default | hover rpy=[20, -15, 30] | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Hover test: initial roll 20 deg, pitch -15 deg, yaw 30 deg, attitude error angle 36.8 deg
+Commands: f = m g = 0.2646 N, R_d = I, Omega_d = 0
+PASS: the attitude converged. The attitude error angle stays below 1 deg after t = 0.29 s.
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/hover_20261117-144218
+
+===== hover_roll45 | hover rpy=[45, 0, 0] | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Hover test: initial roll 45 deg, pitch 0 deg, yaw 0 deg, attitude error angle 45.0 deg
+Commands: f = m g = 0.2646 N, R_d = I, Omega_d = 0
+PASS: the attitude converged. The attitude error angle stays below 1 deg after t = 0.20 s.
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/hover_20261117-144220
+
+===== sweep_wn4 | circle | Kx=0.4320 Kv=0.1944 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0087, y = 0.0092, z = 0.0018, position error norm = 0.0128
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144222
+
+===== sweep_wn4 | diamond | Kx=0.4320 Kv=0.1944 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0005, y = 0.0056, z = 0.0048, position error norm = 0.0074
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144224
+
+===== sweep_wn6 | circle | Kx=0.9720 Kv=0.2916 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0045, y = 0.0048, z = 0.0008, position error norm = 0.0066
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144227
+
+===== sweep_wn6 | diamond | Kx=0.9720 Kv=0.2916 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0002, y = 0.0031, z = 0.0035, position error norm = 0.0047
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144229
+
+===== sweep_wn8 | circle | Kx=1.7280 Kv=0.3888 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0027, y = 0.0028, z = 0.0005, position error norm = 0.0039
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144231
+
+===== sweep_wn8 | diamond | Kx=1.7280 Kv=0.3888 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0001, y = 0.0027, z = 0.0032, position error norm = 0.0042
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144233
+
+===== sweep_wn10 | circle | Kx=2.7000 Kv=0.4860 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0018, y = 0.0019, z = 0.0003, position error norm = 0.0026
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144236
+
+===== sweep_wn10 | diamond | Kx=2.7000 Kv=0.4860 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0001, y = 0.0028, z = 0.0031, position error norm = 0.0042
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144238
+
+===== sweep_wn12 | circle | Kx=3.8880 Kv=0.5832 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0013, y = 0.0013, z = 0.0002, position error norm = 0.0018
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144240
+
+===== sweep_wn12 | diamond | Kx=3.8880 Kv=0.5832 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0001, y = 0.0039, z = 0.0031, position error norm = 0.0050
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144242
+
+===== sweep_wn14 | circle | Kx=5.2920 Kv=0.6804 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0225, y = 0.0188, z = 0.0068, position error norm = 0.0301
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144245
+
+===== sweep_wn14 | diamond | Kx=5.2920 Kv=0.6804 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0133, y = 0.0284, z = 0.0101, position error norm = 0.0329
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144247
+
+===== sweep_wn16 | circle | Kx=6.9120 Kv=0.7776 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.4686, y = 1.7616, z = 0.6310, position error norm = 1.9290
+Controller evaluation score for this trajectory: 0
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144250
+
+===== sweep_wn16 | diamond | Kx=6.9120 Kv=0.7776 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.2491, y = 0.3564, z = 0.7318, position error norm = 0.8512
+Controller evaluation score for this trajectory: 0
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144252
+
+===== sweep_wn20 | circle | Kx=10.8000 Kv=0.9720 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.5858, y = 0.3357, z = 0.7750, position error norm = 1.0278
+Controller evaluation score for this trajectory: 0
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144254
+
+===== sweep_wn20 | diamond | Kx=10.8000 Kv=0.9720 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.6259, y = 0.6864, z = 0.8159, position error norm = 1.2363
+Controller evaluation score for this trajectory: 0
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144256
+
+===== task2_Kv_x0.5 | circle | Kx=2.7000 Kv=0.2430 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0021, y = 0.0022, z = 0.0003, position error norm = 0.0031
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144259
+
+===== task2_Kv_x0.5 | diamond | Kx=2.7000 Kv=0.2430 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0003, y = 0.0137, z = 0.0035, position error norm = 0.0141
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144301
+
+===== task2_Kx_x0.5 | circle | Kx=1.3500 Kv=0.4860 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0028, y = 0.0030, z = 0.0005, position error norm = 0.0041
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144303
+
+===== task2_Kx_x0.5 | diamond | Kx=1.3500 Kv=0.4860 | K_R=[0.00875 0.00875 0.00488] K_Om=[0.00063  0.00063  0.000586] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0002, y = 0.0024, z = 0.0035, position error norm = 0.0042
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144305
+
+===== hover_default_att35 | hover rpy=[20, -15, 30] | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Hover test: initial roll 20 deg, pitch -15 deg, yaw 30 deg, attitude error angle 36.8 deg
+Commands: f = m g = 0.2646 N, R_d = I, Omega_d = 0
+PASS: the attitude converged. The attitude error angle stays below 1 deg after t = 0.29 s.
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/hover_20261117-144307
+
+===== hover_roll45_att35 | hover rpy=[45, 0, 0] | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Hover test: initial roll 45 deg, pitch 0 deg, yaw 0 deg, attitude error angle 45.0 deg
+Commands: f = m g = 0.2646 N, R_d = I, Omega_d = 0
+PASS: the attitude converged. The attitude error angle stays below 1 deg after t = 0.14 s.
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/hover_20261117-144308
+
+===== att35_wn10 | circle | Kx=2.7000 Kv=0.4860 | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0011, y = 0.0012, z = 0.0002, position error norm = 0.0017
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144310
+
+===== att35_wn10 | diamond | Kx=2.7000 Kv=0.4860 | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0001, y = 0.0021, z = 0.0033, position error norm = 0.0039
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144312
+
+===== att35_wn12 | circle | Kx=3.8880 Kv=0.5832 | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0008, y = 0.0008, z = 0.0001, position error norm = 0.0012
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144314
+
+===== att35_wn12 | diamond | Kx=3.8880 Kv=0.5832 | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0001, y = 0.0023, z = 0.0033, position error norm = 0.0040
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144316
+
+===== att35_wn14 | circle | Kx=5.2920 Kv=0.6804 | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0006, y = 0.0006, z = 0.0001, position error norm = 0.0009
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144319
+
+===== att35_wn14 | diamond | Kx=5.2920 Kv=0.6804 | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0000, y = 0.0024, z = 0.0034, position error norm = 0.0042
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144321
+
+===== att35_wn16 | circle | Kx=6.9120 Kv=0.7776 | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Trajectory: circle, duration: 15 s
+RMSE [m]: x = 0.0005, y = 0.0005, z = 0.0001, position error norm = 0.0007
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/circle_15s_20261117-144323
+
+===== att35_wn16 | diamond | Kx=6.9120 Kv=0.7776 | K_R=[0.01715   0.01715   0.0048825] K_Om=[0.000882  0.000882  0.0005859] =====
+Trajectory: diamond, duration: 8 s
+RMSE [m]: x = 0.0000, y = 0.0026, z = 0.0047, position error norm = 0.0053
+Controller evaluation score for this trajectory: 100
+Log and figures saved to /home/shreehank1906/rbe-502-crazyflie-project/experiments/rerun_20261117/runs/diamond_8s_20261117-144326
