@@ -71,7 +71,9 @@ halving the proportional gain mainly increases the error on the circle.
 Shortening the trajectories increases the error much faster than the speed.
 The two trajectories reach different limits: on the diamond, the attitude
 loop cannot follow the required tilt rate, and on the circle, the rotors
-reach their maximum thrust.
+reach their maximum thrust. Adding the desired angular velocity, derived
+from the jerk by differential flatness, as a feedforward term reduces the
+error on the fastest trajectories by 68\% (diamond) and 82\% (circle).
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -86,8 +88,9 @@ defines the attitude error directly on the rotation matrix, so it remains
 valid far from hover and has no Euler-angle singularities. This report
 presents its implementation for the Crazyflie 2.X in a PyBullet simulator,
 the design of its gains (Section~\ref{sec:best}), the sensitivity of the
-tracking to the position gains (Section~\ref{sec:sens}), and the effect of
-the trajectory speed (Section~\ref{sec:speed}).
+tracking to the position gains (Section~\ref{sec:sens}), the effect of
+the trajectory speed (Section~\ref{sec:speed}), and an angular velocity
+feedforward (Section~\ref{sec:bonus}).
 
 % =====================================================================
 \section{Model and Controller}\label{sec:model}
@@ -471,9 +474,112 @@ Faster trajectories therefore increase the error in three ways: they require
 larger tilts, which reduce the vertical thrust; they require faster changes
 of the tilt, which the attitude loop with $\Om_d=\mathbf 0$ follows with a
 lag; and they leave less rotor thrust for the moment, both near zero thrust
-(diamond) and near the maximum (circle). Feedforward of the desired angular
-velocity, obtained from the jerk by differential flatness, would remove most
-of the attitude lag.
+(diamond) and near the maximum (circle). Section~\ref{sec:bonus} removes most
+of the attitude lag with a feedforward of the desired angular velocity.
+
+\begin{figure*}[!t]
+\centering
+\fig{bonus_eR_numerical.pdf}{4.5cm}
+\caption{Attitude error norm $\|\ve_R(t)\|$ on the shortest trajectories
+(diamond 3.5~s, circle 9~s), without and with the $\Om_d$ feedforward.}
+\label{fig:bonus}
+\end{figure*}
+
+% =====================================================================
+\section{Bonus: Angular Velocity Feedforward}\label{sec:bonus}
+
+\subsection{Desired Angular Velocity from Differential Flatness}
+With $\mathbf u=\va_d+g\ve_3$, exact tracking gives $f\vb_{3,d}=m\mathbf u$
+and $f=m\|\mathbf u\|$. Differentiating once,
+$\dot f\vb_{3,d}+f\dot\vb_{3,d}=m\mathbf j_d$, where $\mathbf j_d$ is the
+desired jerk. Since $\dot\vb_3=\R(\Om\times\ve_3)=\Omega_2\vb_1-\Omega_1\vb_2$,
+the components along $\vb_{3,d}$, $\vb_{1,d}$, and $\vb_{2,d}$ give
+\begin{equation}
+\begin{gathered}
+\dot\vb_{3,d}=\frac{\mathbf j_d-(\vb_{3,d}\cdot\mathbf j_d)\,\vb_{3,d}}{\|\mathbf u\|},\\
+\Omega_{d,1}=-\dot\vb_{3,d}\cdot\vb_{2,d},\qquad
+\Omega_{d,2}=\dot\vb_{3,d}\cdot\vb_{1,d}.
+\end{gathered}
+\label{eq:omd12}
+\end{equation}
+The third component follows from differentiating
+$\vb_{2,d}=\vb_{3,d}\times\vb_{1,c}/\|\vb_{3,d}\times\vb_{1,c}\|$ and using
+$\Omega_{d,3}=-\vb_{1,d}\cdot\dot\vb_{2,d}$, with
+$\mathbf y_c=[-\sin\psi_d\ \ \cos\psi_d\ \ 0]^\top$:
+\begin{equation}
+\Omega_{d,3}=\frac{\Omega_{d,1}(\vb_{1,c}\cdot\vb_{3,d})
++\dot\psi_d\,(\mathbf y_c\cdot\vb_{2,d})}{\|\vb_{3,d}\times\vb_{1,c}\|}.
+\label{eq:omd3}
+\end{equation}
+The commonly used approximation $\Omega_{d,3}=\dot\psi_d\,(\ve_3\cdot\vb_{3,d})$
+does not hold for this construction of $\R_d$: on the 9~s circle it differs
+from~\eqref{eq:omd3} by up to 5.8~rad/s. Away from the segment junctions,
+\eqref{eq:omd12} and~\eqref{eq:omd3} agree with a finite-difference derivative
+of $\R_d$ to within $10^{-5}$~rad/s.
+
+$\Om_d$ enters~\eqref{eq:att} through
+$\ve_\Omega=\Om-\R^\top\R_d\Om_d$ and the term
+$-\J(\hat\Om\R^\top\R_d\Om_d)$ of~(13) in the project statement, with
+$\dot\Om_d=\mathbf 0$. The gains are unchanged. With zero jerk and yaw rate,
+$\Om_d=\mathbf 0$ and the controller reproduces the results of
+Section~\ref{sec:best} exactly.
+
+\subsection{Desired Jerk}
+The provided trajectory functions return a zero jerk, and the provided
+simulation script does not pass the jerk to the controller. We therefore
+use the same simulation loop with the jerk added. The trajectory functions
+give the desired acceleration $\va_d(t)$ exactly at any time, so we compute
+the desired jerk by a central difference,
+\begin{equation}
+\mathbf j_d(t)\approx\frac{\va_d(t+h)-\va_d(t-h)}{2h},\qquad h=10^{-4}~\text{s},
+\label{eq:jerk}
+\end{equation}
+with a one-sided difference at $t=0$. The truncation error is of order $h^2$
+and negligible for the smooth quintic segments. At the junctions between
+segments, where the jerk of the rest-to-rest quintics is discontinuous,
+\eqref{eq:jerk} returns the average of the two one-sided values for a single
+sample.
+
+Evaluated with~\eqref{eq:jerk} over 4001 samples of each trajectory, the
+peak desired jerk $\|\mathbf j_d\|$ is 89.5~m/s$^3$ on the 3.5~s diamond and
+67.5~m/s$^3$ on the 9~s circle. These are the jerks that enter
+\eqref{eq:omd12} in all results below.
+
+\subsection{Results}
+Table~\ref{tab:bonus} and Fig.~\ref{fig:bonus} compare the shortest
+durations of Section~\ref{sec:speed} without and with the feedforward.
+RMSE$_e$ decreases by 68\% on the diamond and by 82\% on the circle, and
+the circle at 9~s becomes more accurate than the default 15~s circle
+without feedforward (2.59~mm). Without $\Om_d$, the damping term
+$-\K_\Omega\Om$ opposes the rotation that the trajectory requires, so the
+attitude lags $\R_d$. With $\Om_d$, the attitude loop damps only the
+deviation from the desired rotation: the rms of $\|\ve_R\|$ halves on the
+diamond and falls by a factor of six on the circle. On the diamond, the
+smaller attitude lag also removes most of the tilt overshoot (peak tilt
+$65^\circ$ instead of $86^\circ$) and lowers the peak thrust from $1.88$ to
+$1.70\,mg$, closer to $f_d=1.64\,mg$. The remaining peaks of $\|\ve_R\|$ on
+the diamond occur at the vertices, where the jerk, and therefore $\Om_d$, is
+discontinuous and $\dot\Om_d=\mathbf 0$ is a poor approximation, and at
+touchdown at the end of the run.
+
+\begin{table}[htbp]
+\caption{Effect of the $\Om_d$ Feedforward on the Shortest Trajectories}
+\label{tab:bonus}
+\centering
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{4}{c}{RMSE (mm)} & rms & Peak\\
+\cmidrule(lr){2-5}
+Case & $x$ & $y$ & $z$ & $e$ & $\|\ve_R\|$ & tilt\\
+\midrule
+Diamond 3.5 s & 0.76 & 23.78 & 9.96 & 25.80 & 0.389 & $86^\circ$\\
+\quad with $\Om_d$ & 0.39 & 6.02 & 5.55 & 8.20 & 0.190 & $65^\circ$\\
+Circle 9 s & 9.26 & 9.72 & 2.50 & 13.65 & 0.154 & $61^\circ$\\
+\quad with $\Om_d$ & 1.77 & 1.35 & 0.98 & 2.43 & 0.024 & $58^\circ$\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 % =====================================================================
 \section{Conclusion}
@@ -484,7 +590,10 @@ becomes unstable when their ratio falls below about two. Reducing the
 derivative gain produces oscillation, and reducing the proportional gain
 produces lag. When the trajectories are shortened, the diamond is limited by
 the attitude rate and the circle by the rotor thrust, so the total thrust
-alone does not determine whether a trajectory can be tracked.
+alone does not determine whether a trajectory can be tracked. A feedforward
+of the desired angular velocity, derived from the jerk by differential
+flatness, removes most of the attitude lag and reduces the error on the
+fastest trajectories by 68--82\% with the same gains.
 
 % =====================================================================
 \begin{thebibliography}{00}
