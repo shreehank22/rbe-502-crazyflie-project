@@ -1,0 +1,610 @@
+% =====================================================================
+%  RBE 502 - Quadrotor Control Project: Geometric Tracking Control
+%  Report (IEEEtran conference).
+%  Compile from this folder: pdflatex skate_quadrotor_project.tex (x2)
+%  Figures: figures/ (copied from the run folders and the plotting scripts).
+% =====================================================================
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{subcaption}
+\captionsetup[subfigure]{labelformat=simple}
+\renewcommand{\thesubfigure}{(\alph{subfigure})}
+\usepackage{url}
+\usepackage{stfloats}   % fixes ordering of full-width figures
+
+\setcounter{dbltopnumber}{3}
+\renewcommand{\dbltopfraction}{0.95}
+\renewcommand{\dblfloatpagefraction}{0.65}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\floatpagefraction}{0.7}
+\renewcommand{\textfraction}{0.05}
+\setlength{\dblfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+
+% \fig{file}{height}: includes figures/file if present, else a placeholder
+\newcommand{\fig}[2]{%
+  \IfFileExists{figures/#1}%
+    {\includegraphics[width=\linewidth]{figures/#1}}%
+    {\fbox{\parbox[c][#2][c]{0.92\linewidth}{\centering\scriptsize\texttt{figures/\detokenize{#1}}}}}}
+
+% ---------- Notation -------------------------------------------------
+\newcommand{\vx}{\mathbf{x}}
+\newcommand{\vv}{\mathbf{v}}
+\newcommand{\va}{\mathbf{a}}
+\newcommand{\ve}{\mathbf{e}}
+\newcommand{\vb}{\mathbf{b}}
+\newcommand{\R}{\mathbf{R}}
+\newcommand{\J}{\mathbf{J}}
+\newcommand{\M}{\mathbf{M}}
+\newcommand{\F}{\mathbf{F}}
+\newcommand{\K}{\mathbf{K}}
+\newcommand{\Om}{\boldsymbol{\Omega}}
+
+\begin{document}
+
+\title{Geometric Tracking Control of a Crazyflie 2.X Quadrotor on SE(3)}
+
+\author{
+\IEEEauthorblockN{Shreehan Santosh Kate}
+\IEEEauthorblockA{Robotics Engineering\\Worcester Polytechnic Institute\\skate@wpi.edu}
+}
+
+\maketitle
+
+% =====================================================================
+\begin{abstract}
+We implement the geometric tracking controller of Lee et al.\ for a simulated
+Crazyflie 2.X and use it to track a circle and a diamond trajectory. The
+gains are designed from second-order models of the attitude and position
+loops and then tuned with a sweep of the position-loop natural frequency.
+With the final gains, the position error RMSE is 2.6~mm on the circle and
+4.2~mm on the diamond. Halving the derivative gain makes the diamond
+oscillate at the loop's natural frequency and triples its error, while
+halving the proportional gain mainly increases the error on the circle.
+Shortening the trajectories increases the error much faster than the speed.
+The two trajectories reach different limits: on the diamond, the attitude
+loop cannot follow the required tilt rate, and on the circle, the rotors
+reach their maximum thrust. Adding the desired angular velocity, derived
+from the jerk by differential flatness, as a feedforward term reduces the
+error on the fastest trajectories by 68\% (diamond) and 82\% (circle).
+\end{abstract}
+
+\begin{IEEEkeywords}
+Quadrotor, geometric control, SE(3), differential flatness, gain tuning
+\end{IEEEkeywords}
+
+% =====================================================================
+\section{Introduction}
+Controllers obtained by linearizing the quadrotor dynamics about hover assume
+small roll and pitch angles. The geometric controller of~\cite{lee} instead
+defines the attitude error directly on the rotation matrix, so it remains
+valid far from hover and has no Euler-angle singularities. This report
+presents its implementation for the Crazyflie 2.X in a PyBullet simulator,
+the design of its gains (Section~\ref{sec:best}), the sensitivity of the
+tracking to the position gains (Section~\ref{sec:sens}), the effect of
+the trajectory speed (Section~\ref{sec:speed}), and an angular velocity
+feedforward (Section~\ref{sec:bonus}).
+
+% =====================================================================
+\section{Model and Controller}\label{sec:model}
+The inertial frame has $\ve_3$ pointing up. The state is the position $\vx$,
+the velocity $\vv$, the rotation matrix $\R=[\vb_1\ \vb_2\ \vb_3]$, and the
+body angular velocity $\Om$. With mass $m=0.027$~kg and inertia
+$\J=\mathrm{diag}(1.4,1.4,2.17)\times10^{-5}$~kg\,m$^2$,
+\begin{equation}
+m\dot\vv = f\R\ve_3 - mg\ve_3,\qquad \J\dot\Om + \Om\times\J\Om = \M.
+\label{eq:dyn}
+\end{equation}
+The thrust $f$ acts only along $\vb_3$, so the quadrotor must tilt to
+accelerate horizontally. This leads to a cascaded controller~\cite{mahony}.
+
+\emph{Position loop.} With $\ve_x=\vx-\vx_d$ and $\ve_v=\vv-\vv_d$,
+\begin{equation}
+\F_d = -\K_x\ve_x - \K_v\ve_v + mg\ve_3 + m\va_d,\qquad f = \F_d\cdot\R\ve_3 .
+\label{eq:pos}
+\end{equation}
+The desired attitude aligns $\vb_3$ with $\F_d$ and sets the heading from the
+desired yaw $\psi_d$: $\vb_{3,d}=\F_d/\|\F_d\|$,
+$\vb_{1,c}=[\cos\psi_d\ \sin\psi_d\ 0]^\top$,
+$\vb_{2,d}=\vb_{3,d}\times\vb_{1,c}/\|\vb_{3,d}\times\vb_{1,c}\|$,
+$\vb_{1,d}=\vb_{2,d}\times\vb_{3,d}$, and
+$\R_d=[\vb_{1,d}\ \vb_{2,d}\ \vb_{3,d}]$.
+
+\emph{Attitude loop.} With $\Om_d=\mathbf 0$,
+\begin{equation}
+\ve_R=\tfrac12\left(\R_d^\top\R-\R^\top\R_d\right)^\vee,\quad
+\M=-\K_R\ve_R-\K_\Omega\Om+\Om\times\J\Om .
+\label{eq:att}
+\end{equation}
+The simulator integrates the dynamics at 1000~Hz, and the controller runs at
+200~Hz. The provided code converts $f$ and $\M$ into rotor speeds and clips
+each rotor thrust to $[0,\ 0.149]$~N, so the maximum total thrust is
+$f_{\max}=2.25\,mg$.
+
+% =====================================================================
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}{0.32\textwidth}\centering
+  \fig{task1_circle_position.png}{4cm}\caption{Position vs.\ desired}\end{subfigure}\hfill
+\begin{subfigure}{0.32\textwidth}\centering
+  \fig{task1_circle_error.png}{4cm}\caption{Position error $\ve_x$}\end{subfigure}\hfill
+\begin{subfigure}{0.32\textwidth}\centering
+  \fig{task1_circle_path3d.png}{4cm}\caption{3D path vs.\ desired}\end{subfigure}\\[4pt]
+\begin{subfigure}{0.24\textwidth}\centering
+  \fig{task1_circle_attitude.png}{5cm}\caption{Roll, pitch, yaw of $\R$, $\R_d$; $\|\ve_R\|$}\end{subfigure}\hspace{0.05\textwidth}
+\begin{subfigure}{0.24\textwidth}\centering
+  \fig{task1_circle_control.png}{5cm}\caption{Thrust $f$ and moment $\M$}\end{subfigure}
+\caption{Circle (15~s) with the final gains. In (c), the actual path covers
+the desired path.}
+\label{fig:t1_circle}
+\end{figure*}
+
+\section{Best Gains Performance}\label{sec:best}
+
+\subsection{Gain Design}
+For small errors, $\ve_R$ approximates the roll, pitch, and yaw errors, and
+the term $\Om\times\J\Om$ in~\eqref{eq:att} cancels the gyroscopic coupling
+in~\eqref{eq:dyn}. Each attitude axis then behaves as
+$J_i\ddot\theta+k_{\Omega,i}\dot\theta+k_{R,i}\theta=0$. Assuming that the
+attitude loop is fast, each position axis behaves as
+$m\ddot e+k_v\dot e+k_xe=0$. The gains therefore follow from a chosen
+natural frequency $\omega_n$ and damping ratio $\zeta$:
+\begin{equation}
+k_R=J_i\omega_n^2,\ k_\Omega=2\zeta J_i\omega_n,\qquad
+k_x=m\omega_n^2,\ k_v=2\zeta m\omega_n .
+\end{equation}
+We use $\zeta=0.9$ for both loops. For roll and pitch, $\omega_n=25$~rad/s
+gives a settling time $4/(\zeta\omega_n)\approx0.18$~s and
+$\omega_nT_s=0.125$ at the 5~ms control period. The yaw moment comes only
+from the rotor reaction torques and is limited to about
+$\gamma mg\approx6.6\times10^{-3}$~N\,m. With $\omega_n=25$~rad/s, the
+initial yaw error of the hover test would already require this moment, so we
+use $\omega_n=15$~rad/s for yaw. Yaw does not affect $\vb_3$, so the slower
+yaw loop does not slow down position tracking. Table~\ref{tab:gains} lists
+the final gains.
+
+\begin{table}[htbp]
+\caption{Final Controller Gains}
+\label{tab:gains}
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lll}
+\toprule
+Gain & Value & Design ($\zeta=0.9$)\\
+\midrule
+$\K_x$ & $2.700\,\mathbf I_3$ & $\omega_n=10$ rad/s\\
+$\K_v$ & $0.486\,\mathbf I_3$ & $\omega_n=10$ rad/s\\
+$\K_R$ & $\mathrm{diag}(8.75,\,8.75,\,4.88)\times10^{-3}$ & $\omega_n=25,25,15$ rad/s\\
+$\K_\Omega$ & $\mathrm{diag}(6.30,\,6.30,\,5.86)\times10^{-4}$ & $\omega_n=25,25,15$ rad/s\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{Hover test.} Starting from roll $20^\circ$, pitch $-15^\circ$, and yaw
+$30^\circ$ (attitude error $36.8^\circ$), the attitude error falls below
+$1^\circ$ after 0.29~s. This matches the predicted yaw settling time of
+0.30~s, since yaw is the slowest axis. From a $45^\circ$ roll it converges in
+0.20~s (predicted 0.18~s). The smallest rotor thrust is 0.0036~N and
+0.011~N in these two tests, so the rotors never reach their lower limit.
+
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}{0.32\textwidth}\centering
+  \fig{task1_diamond_position.png}{4cm}\caption{Position vs.\ desired}\end{subfigure}\hfill
+\begin{subfigure}{0.32\textwidth}\centering
+  \fig{task1_diamond_error.png}{4cm}\caption{Position error $\ve_x$}\end{subfigure}\hfill
+\begin{subfigure}{0.32\textwidth}\centering
+  \fig{task1_diamond_path3d.png}{4cm}\caption{3D path vs.\ desired}\end{subfigure}\\[4pt]
+\begin{subfigure}{0.24\textwidth}\centering
+  \fig{task1_diamond_attitude.png}{5cm}\caption{Roll, pitch, yaw of $\R$, $\R_d$; $\|\ve_R\|$}\end{subfigure}\hspace{0.05\textwidth}
+\begin{subfigure}{0.24\textwidth}\centering
+  \fig{task1_diamond_control.png}{5cm}\caption{Thrust $f$ and moment $\M$}\end{subfigure}
+\caption{Diamond (8~s) with the final gains. The $e_z$ peaks at the start and
+end come from the 12.5~mm ground offset.}
+\label{fig:t1_diamond}
+\end{figure*}
+
+\subsection{Tuning of the Position Loop}
+With the attitude gains fixed, we varied the position-loop $\omega_n$ with
+$\zeta=0.9$ (Table~\ref{tab:sweep}). On the circle, the error decreases
+approximately as $\omega_n^{-1.8}$ up to 12~rad/s. On the diamond, it
+reaches its minimum at $\omega_n=8$--10~rad/s and increases at 12~rad/s,
+where the peak attitude error reaches $17.7^\circ$ and the circle error
+starts to oscillate. At 14~rad/s, both trajectories become unstable and the
+quadrotor flips over. As the position loop approaches the 25~rad/s attitude
+loop, the attitude can no longer follow $\R_d$, which is the time-scale
+separation that the cascade assumes. No rotor saturates at 10 or 12~rad/s,
+so saturation is not the cause. We chose $\omega_n=10$~rad/s: it gives the
+lowest diamond error and nearly the lowest combined error, and it keeps a
+ratio of 2.5 to the attitude loop instead of 2.1 at 12~rad/s.
+
+\begin{table}[htbp]
+\caption{Position-Loop Sweep ($\zeta=0.9$). RMSE$_e$ in mm; $\theta_{\max}$: peak
+attitude error angle on the diamond}
+\label{tab:sweep}
+\centering
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{cccccc}
+\toprule
+$\omega_n$ (rad/s) & $k_x$ & $k_v$ & Circle & Diamond & $\theta_{\max}$\\
+\midrule
+4 & 0.432 & 0.194 & 12.81 & 7.39 & $4.1^\circ$\\
+6 & 0.972 & 0.292 & 6.62 & 4.73 & $3.9^\circ$\\
+8 & 1.728 & 0.389 & 3.94 & 4.20 & $7.6^\circ$\\
+\textbf{10} & \textbf{2.700} & \textbf{0.486} & \textbf{2.59} & \textbf{4.17} & $12.5^\circ$\\
+12 & 3.888 & 0.583 & 1.85 & 4.99 & $17.7^\circ$\\
+14 & 5.292 & 0.680 & \multicolumn{3}{c}{unstable (flips)}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}{0.42\textwidth}\centering
+  \fig{task2_circle.pdf}{6cm}\caption{Circle}\end{subfigure}\hfill
+\begin{subfigure}{0.42\textwidth}\centering
+  \fig{task2_diamond.pdf}{6cm}\caption{Diamond}\end{subfigure}
+\caption{Position error components for the baseline gains and with $\K_v$ or
+$\K_x$ reduced by 50\%.}
+\label{fig:sens}
+\end{figure*}
+
+\subsection{Tracking Results}
+Table~\ref{tab:task1} lists the RMSE with the final gains, and
+Figs.~\ref{fig:t1_circle} and~\ref{fig:t1_diamond} show the responses. Both
+trajectories score below the 0.05~m threshold by about an order of
+magnitude. The acceleration feedforward $m\va_d$ supplies almost all of the
+required thrust, and the actual thrust stays close to the ideal thrust of
+Section~\ref{sec:speed} (Fig.~\ref{fig:t3_thrust}). On the circle, the
+horizontal errors are about six times the vertical error, because
+horizontal acceleration requires the quadrotor to tilt first, whereas
+vertical acceleration only changes the thrust. The circle requires a tilt of
+about $30^\circ$ at its highest speed (2.36~m/s, centripetal acceleration
+$5.5$~m/s$^2$). The diamond starts and ends at $z=0$, but the center of mass
+rests 12.5~mm above the ground, so the start and end of every run contain an
+error that the controller cannot remove. Without the first and last 0.5~s,
+the diamond RMSE$_e$ is 1.76~mm.
+
+\begin{table}[htbp]
+\caption{Tracking Performance with the Final Gains (mm)}
+\label{tab:task1}
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccc}
+\toprule
+& \multicolumn{4}{c}{RMSE} & Max\\
+\cmidrule(lr){2-5}
+Trajectory & $x$ & $y$ & $z$ & $e$ & $\|\ve_x\|$\\
+\midrule
+Circle (15 s) & 1.78 & 1.87 & 0.30 & 2.59 & 7.2\\
+Diamond (8 s) & 0.10 & 2.81 & 3.07 & 4.17 & 16.5\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =====================================================================
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}{0.48\textwidth}\centering
+  \fig{task3_circle_fd.pdf}{4.5cm}\caption{Circle}\end{subfigure}\hfill
+\begin{subfigure}{0.48\textwidth}\centering
+  \fig{task3_diamond_fd.pdf}{4.5cm}\caption{Diamond}\end{subfigure}
+\caption{Required thrust $f_d(t)$~\eqref{eq:fd} for the three durations,
+with $f_{\max}=2.25\,mg$.}
+\label{fig:fd}
+\end{figure*}
+
+\section{Sensitivity to Gain Variations}\label{sec:sens}
+Starting from the final gains, we reduced $\K_v$ and then $\K_x$ by 50\%,
+one at a time. Table~\ref{tab:sens} lists the results, and
+Fig.~\ref{fig:sens} compares the errors with the baseline.
+
+\begin{table}[htbp]
+\caption{Gain Sensitivity: RMSE (mm)}
+\label{tab:sens}
+\centering
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{llcccccc}
+\toprule
+& Case & $\omega_n$ & $\zeta$ & $x$ & $y$ & $z$ & $e$\\
+\midrule
+\multirow{3}{*}{\rotatebox{90}{Circle}}
+& Baseline & 10.0 & 0.90 & 1.78 & 1.87 & 0.30 & 2.59\\
+& $\K_v\times0.5$ & 10.0 & 0.45 & 2.05 & 2.23 & 0.33 & 3.05\\
+& $\K_x\times0.5$ & 7.07 & 1.27 & 2.79 & 2.96 & 0.55 & 4.11\\
+\midrule
+\multirow{3}{*}{\rotatebox{90}{Diamond}}
+& Baseline & 10.0 & 0.90 & 0.10 & 2.81 & 3.07 & 4.17\\
+& $\K_v\times0.5$ & 10.0 & 0.45 & 0.31 & 13.67 & 3.50 & 14.12\\
+& $\K_x\times0.5$ & 7.07 & 1.27 & 0.17 & 2.35 & 3.47 & 4.19\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{Derivative gain.} Halving $\K_v$ keeps $\omega_n$ and halves $\zeta$
+to 0.45. The error does not grow through lag; it oscillates. On the diamond,
+$e_y$ oscillates at 1.75~Hz (11~rad/s, close to $\omega_n$) with an
+amplitude of 15--25~mm for the whole trajectory, and RMSE$_e$ increases
+3.4 times. Each stop at a vertex excites this oscillation again. The
+oscillation is larger than $\zeta=0.45$ alone suggests, because the lag of
+the attitude loop reduces the effective damping of the position loop. On
+the smooth circle, RMSE$_e$ increases by only 18\%, but the number of sign
+changes of $e_x$ rises from 6 to 41, which shows a small persistent
+oscillation.
+
+\emph{Proportional gain.} Halving $\K_x$ lowers $\omega_n$ to 7.07~rad/s and
+raises $\zeta$ to 1.27. The response becomes overdamped: the errors grow but
+keep their shape, with no added oscillation. The circle error increases by
+59\%, consistent with the trend of Table~\ref{tab:sweep}. The diamond error
+is unchanged, and the peak attitude error decreases from $12.5^\circ$ to
+$6.1^\circ$, because the softer position loop gives the attitude loop more
+time.
+
+The proportional gain therefore sets the tracking accuracy on sustained,
+smooth motion, and the derivative gain sets the damping that abrupt,
+stop-and-go motion requires. The RMSE alone can hide this difference, as the
+circle with reduced $\K_v$ shows.
+
+% =====================================================================
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}{0.42\textwidth}\centering
+  \fig{task3_circle_errors.pdf}{6cm}\caption{Circle}\end{subfigure}\hfill
+\begin{subfigure}{0.42\textwidth}\centering
+  \fig{task3_diamond_errors.pdf}{6cm}\caption{Diamond}\end{subfigure}
+\caption{Position error components for the three durations.}
+\label{fig:t3_err}
+\end{figure*}
+
+\section{Effect of Trajectory Speed}\label{sec:speed}
+
+\subsection{Required Thrust from Differential Flatness}
+The position and yaw are flat outputs of the quadrotor~\cite{mellinger}. If the quadrotor tracks the trajectory exactly, then $\dot\vv=\va_d$, and
+the translational dynamics~\eqref{eq:dyn} give
+$f\R\ve_3=m(\va_d+g\ve_3)$. Since $\R\ve_3=\vb_3$ is a unit vector,
+\begin{equation}
+f_d(t)=m\,\|\va_d(t)+g\ve_3\|,\qquad
+\vb_{3,d}=\frac{\va_d+g\ve_3}{\|\va_d+g\ve_3\|}.
+\label{eq:fd}
+\end{equation}
+The desired acceleration alone thus determines the required thrust and the
+tilt $\theta_d$, with $\cos\theta_d=(a_{d,z}+g)/\|\va_d+g\ve_3\|$. Both
+trajectories consist of rest-to-rest quintic segments. Shortening the
+duration from $T_0$ to $T$ therefore scales $\va_d$ by $s^2$, where
+$s=T_0/T$, and $f_d=m\|s^2\va_{d,0}+g\ve_3\|$. At low speed, gravity
+dominates and $f_d$ grows slowly. At high speed, the $s^2$ term dominates.
+
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}{0.42\textwidth}\centering
+  \fig{task3_circle_thrust.pdf}{6cm}\caption{Circle}\end{subfigure}\hfill
+\begin{subfigure}{0.42\textwidth}\centering
+  \fig{task3_diamond_thrust.pdf}{6cm}\caption{Diamond}\end{subfigure}
+\caption{Actual thrust $f(t)$ and required thrust $f_d(t)$ for the three
+durations.}
+\label{fig:t3_thrust}
+\end{figure*}
+
+\subsection{Choice of Durations}
+For the shortest duration, the peak of $f_d$ must lie between $1.5\,mg$ and
+$2.25\,mg$. We chose 8, 5, and 3.5~s for the diamond (peak $1.64\,mg$) and
+15, 12, and 9~s for the circle (peak $1.86\,mg$), the shortest durations in
+this range for which the quadrotor remained stable
+(Table~\ref{tab:speed}). The provided circle has fixed segment times, so we
+generated the shorter circles by time scaling,
+$\vx_d(t)=\vx_0(st)$, $\vv_d=s\vv_0(st)$, $\va_d=s^2\va_0(st)$. This is
+exact for quintic segments, and at $T=T_0$ it reproduces the default
+circle. Fig.~\ref{fig:fd} shows $f_d(t)$.
+
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}{0.495\textwidth}\centering
+  \fig{task3_circle_paths.pdf}{5cm}\caption{Circle}\end{subfigure}\hfill
+\begin{subfigure}{0.495\textwidth}\centering
+  \fig{task3_diamond_paths.pdf}{5cm}\caption{Diamond}\end{subfigure}
+\caption{Actual and desired paths for the three durations: 3D view and
+projection onto the plane of motion.}
+\label{fig:t3_paths}
+\end{figure*}
+
+\subsection{Results}
+Table~\ref{tab:speed} and Figs.~\ref{fig:t3_err}--\ref{fig:t3_paths} show the
+results. In both cases the error grows much faster than the speed. The
+diamond is 2.3 times faster at 3.5~s and its RMSE$_e$ is 6.2 times larger.
+The circle is 1.7 times faster at 9~s and its RMSE$_e$ is 5.3 times larger.
+
+\begin{table}[htbp]
+\caption{Effect of Trajectory Duration}
+\label{tab:speed}
+\centering
+\setlength{\tabcolsep}{2.6pt}
+\begin{tabular}{lcccccccc}
+\toprule
+& $T$ & \multicolumn{2}{c}{Peak $f$ ($mg$)} & Peak & \multicolumn{4}{c}{RMSE (mm)}\\
+\cmidrule(lr){3-4}\cmidrule(lr){6-9}
+& (s) & $f_d$ & actual & tilt & $x$ & $y$ & $z$ & $e$\\
+\midrule
+\multirow{4}{*}{\rotatebox{90}{Circle}}
+& 15 & 1.15 & 1.15 & $30^\circ$ & 1.78 & 1.87 & 0.30 & 2.59\\
+& 12 & 1.34 & 1.35 & $42^\circ$ & 3.64 & 3.85 & 0.76 & 5.35\\
+& 9 & 1.86 & 1.93 & $61^\circ$ & 9.26 & 9.72 & 2.50 & 13.65\\
+& 8 & 2.23 & \multicolumn{6}{c}{unstable}\\
+\midrule
+\multirow{4}{*}{\rotatebox{90}{Diamond}}
+& 8 & 1.11 & 1.14 & $14^\circ$ & 0.10 & 2.81 & 3.07 & 4.17\\
+& 5 & 1.29 & 1.33 & $36^\circ$ & 0.22 & 6.75 & 3.73 & 7.72\\
+& 3.5 & 1.64 & 1.88 & $86^\circ$ & 0.76 & 23.78 & 9.96 & 25.80\\
+& 3.25 & 1.75 & \multicolumn{6}{c}{unstable}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Discussion}
+\emph{Diamond: attitude rate.} At 3.5~s, the required tilt changes from
+$0^\circ$ to $50^\circ$ and back on every edge within a few tenths of a
+second. With $\Om_d=\mathbf 0$, the damping term $-\K_\Omega\Om$ opposes
+this rotation as well, so the attitude lags $\R_d$ by up to $49^\circ$. The
+resulting position error increases $\F_d$, the commanded tilt overshoots to
+$86^\circ$, and the actual thrust rises to $1.88\,mg$ against
+$f_d=1.64\,mg$ (Fig.~\ref{fig:t3_thrust}). When the quadrotor is tilted by
+$\theta$, only $f\cos\theta$ acts vertically, so $e_z$ grows to 10~mm. The
+smallest rotor thrust falls to 0.016~N, close to the lower limit, which
+leaves little margin for the moment. The path cuts the vertices
+(Fig.~\ref{fig:t3_paths}). At 3.25~s, the quadrotor flips although
+$f_d=1.75\,mg$ remains below $f_{\max}$, so the total thrust is not the
+limiting factor on this trajectory.
+
+\emph{Circle: rotor thrust.} The circle's acceleration changes smoothly, so
+the actual thrust follows $f_d$ closely even at 9~s ($1.93\,mg$ against
+$1.86\,mg$). The required thrust peaks once, during the revolution. At 9~s,
+the largest rotor thrust reaches 0.138~N of the 0.149~N limit. The
+quadrotor lags behind the centripetal acceleration, so the path bulges
+outward by up to 43~mm. At 8.5~s, the rotors saturate at their maximum
+during the revolution, and at 8~s ($f_d=2.23\,mg$) the quadrotor becomes
+unstable.
+
+Faster trajectories therefore increase the error in three ways: they require
+larger tilts, which reduce the vertical thrust; they require faster changes
+of the tilt, which the attitude loop with $\Om_d=\mathbf 0$ follows with a
+lag; and they leave less rotor thrust for the moment, both near zero thrust
+(diamond) and near the maximum (circle). Section~\ref{sec:bonus} removes most
+of the attitude lag with a feedforward of the desired angular velocity.
+
+\begin{figure*}[!t]
+\centering
+\fig{bonus_eR_numerical.pdf}{4.5cm}
+\caption{Attitude error norm $\|\ve_R(t)\|$ on the shortest trajectories
+(diamond 3.5~s, circle 9~s), without and with the $\Om_d$ feedforward.}
+\label{fig:bonus}
+\end{figure*}
+
+% =====================================================================
+\section{Bonus: Angular Velocity Feedforward}\label{sec:bonus}
+
+\subsection{Desired Angular Velocity from Differential Flatness}
+With $\mathbf u=\va_d+g\ve_3$, exact tracking gives $f\vb_{3,d}=m\mathbf u$
+and $f=m\|\mathbf u\|$. Differentiating once,
+$\dot f\vb_{3,d}+f\dot\vb_{3,d}=m\mathbf j_d$, where $\mathbf j_d$ is the
+desired jerk. Since $\dot\vb_3=\R(\Om\times\ve_3)=\Omega_2\vb_1-\Omega_1\vb_2$,
+the components along $\vb_{3,d}$, $\vb_{1,d}$, and $\vb_{2,d}$ give
+\begin{equation}
+\begin{gathered}
+\dot\vb_{3,d}=\frac{\mathbf j_d-(\vb_{3,d}\cdot\mathbf j_d)\,\vb_{3,d}}{\|\mathbf u\|},\\
+\Omega_{d,1}=-\dot\vb_{3,d}\cdot\vb_{2,d},\qquad
+\Omega_{d,2}=\dot\vb_{3,d}\cdot\vb_{1,d}.
+\end{gathered}
+\label{eq:omd12}
+\end{equation}
+The third component follows from differentiating
+$\vb_{2,d}=\vb_{3,d}\times\vb_{1,c}/\|\vb_{3,d}\times\vb_{1,c}\|$ and using
+$\Omega_{d,3}=-\vb_{1,d}\cdot\dot\vb_{2,d}$, with
+$\mathbf y_c=[-\sin\psi_d\ \ \cos\psi_d\ \ 0]^\top$:
+\begin{equation}
+\Omega_{d,3}=\frac{\Omega_{d,1}(\vb_{1,c}\cdot\vb_{3,d})
++\dot\psi_d\,(\mathbf y_c\cdot\vb_{2,d})}{\|\vb_{3,d}\times\vb_{1,c}\|}.
+\label{eq:omd3}
+\end{equation}
+The commonly used approximation $\Omega_{d,3}=\dot\psi_d\,(\ve_3\cdot\vb_{3,d})$
+does not hold for this construction of $\R_d$: on the 9~s circle it differs
+from~\eqref{eq:omd3} by up to 5.8~rad/s. Away from the segment junctions,
+\eqref{eq:omd12} and~\eqref{eq:omd3} agree with a finite-difference derivative
+of $\R_d$ to within $10^{-5}$~rad/s.
+
+$\Om_d$ enters~\eqref{eq:att} through
+$\ve_\Omega=\Om-\R^\top\R_d\Om_d$ and the term
+$-\J(\hat\Om\R^\top\R_d\Om_d)$ of~(13) in the project statement, with
+$\dot\Om_d=\mathbf 0$. The gains are unchanged. With zero jerk and yaw rate,
+$\Om_d=\mathbf 0$ and the controller reproduces the results of
+Section~\ref{sec:best} exactly.
+
+\subsection{Desired Jerk}
+The provided trajectory functions return a zero jerk, and the provided
+simulation script does not pass the jerk to the controller. We therefore
+use the same simulation loop with the jerk added. The trajectory functions
+give the desired acceleration $\va_d(t)$ exactly at any time, so we compute
+the desired jerk by a central difference,
+\begin{equation}
+\mathbf j_d(t)\approx\frac{\va_d(t+h)-\va_d(t-h)}{2h},\qquad h=10^{-4}~\text{s},
+\label{eq:jerk}
+\end{equation}
+with a one-sided difference at $t=0$. The truncation error is of order $h^2$
+and negligible for the smooth quintic segments. At the junctions between
+segments, where the jerk of the rest-to-rest quintics is discontinuous,
+\eqref{eq:jerk} returns the average of the two one-sided values for a single
+sample.
+
+Evaluated with~\eqref{eq:jerk} over 4001 samples of each trajectory, the
+peak desired jerk $\|\mathbf j_d\|$ is 89.5~m/s$^3$ on the 3.5~s diamond and
+67.5~m/s$^3$ on the 9~s circle. These are the jerks that enter
+\eqref{eq:omd12} in all results below.
+
+\subsection{Results}
+Table~\ref{tab:bonus} and Fig.~\ref{fig:bonus} compare the shortest
+durations of Section~\ref{sec:speed} without and with the feedforward.
+RMSE$_e$ decreases by 68\% on the diamond and by 82\% on the circle, and
+the circle at 9~s becomes more accurate than the default 15~s circle
+without feedforward (2.59~mm). Without $\Om_d$, the damping term
+$-\K_\Omega\Om$ opposes the rotation that the trajectory requires, so the
+attitude lags $\R_d$. With $\Om_d$, the attitude loop damps only the
+deviation from the desired rotation: the rms of $\|\ve_R\|$ halves on the
+diamond and falls by a factor of six on the circle. On the diamond, the
+smaller attitude lag also removes most of the tilt overshoot (peak tilt
+$65^\circ$ instead of $86^\circ$) and lowers the peak thrust from $1.88$ to
+$1.70\,mg$, closer to $f_d=1.64\,mg$. The remaining peaks of $\|\ve_R\|$ on
+the diamond occur at the vertices, where the jerk, and therefore $\Om_d$, is
+discontinuous and $\dot\Om_d=\mathbf 0$ is a poor approximation, and at
+touchdown at the end of the run.
+
+\begin{table}[htbp]
+\caption{Effect of the $\Om_d$ Feedforward on the Shortest Trajectories}
+\label{tab:bonus}
+\centering
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{4}{c}{RMSE (mm)} & rms & Peak\\
+\cmidrule(lr){2-5}
+Case & $x$ & $y$ & $z$ & $e$ & $\|\ve_R\|$ & tilt\\
+\midrule
+Diamond 3.5 s & 0.76 & 23.78 & 9.96 & 25.80 & 0.389 & $86^\circ$\\
+\quad with $\Om_d$ & 0.39 & 6.02 & 5.55 & 8.20 & 0.190 & $65^\circ$\\
+Circle 9 s & 9.26 & 9.72 & 2.50 & 13.65 & 0.154 & $61^\circ$\\
+\quad with $\Om_d$ & 1.77 & 1.35 & 0.98 & 2.43 & 0.024 & $58^\circ$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =====================================================================
+\section{Conclusion}
+The geometric controller, with gains designed from second-order models,
+tracks both trajectories with an RMSE$_e$ of 2.6 and 4.2~mm. The
+position-loop natural frequency is bounded by the attitude loop: the system
+becomes unstable when their ratio falls below about two. Reducing the
+derivative gain produces oscillation, and reducing the proportional gain
+produces lag. When the trajectories are shortened, the diamond is limited by
+the attitude rate and the circle by the rotor thrust, so the total thrust
+alone does not determine whether a trajectory can be tracked. A feedforward
+of the desired angular velocity, derived from the jerk by differential
+flatness, removes most of the attitude lag and reduces the error on the
+fastest trajectories by 68--82\% with the same gains.
+
+% =====================================================================
+\begin{thebibliography}{00}
+\bibitem{lee} T. Lee, M. Leok, and N. H. McClamroch, ``Geometric tracking
+control of a quadrotor UAV on SE(3),'' in \textit{Proc. IEEE Conf. Decision
+and Control (CDC)}, 2010, pp. 5420--5425.
+\bibitem{mahony} R. Mahony, V. Kumar, and P. Corke, ``Multirotor aerial
+vehicles: Modeling, estimation, and control of quadrotor,'' \textit{IEEE
+Robot. Autom. Mag.}, vol. 19, no. 3, pp. 20--32, 2012.
+\bibitem{mellinger} D. Mellinger and V. Kumar, ``Minimum snap trajectory
+generation and control for quadrotors,'' in \textit{Proc. IEEE Int. Conf.
+Robot. Autom. (ICRA)}, 2011, pp. 2520--2525.
+\end{thebibliography}
+\end{document}
